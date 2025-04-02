@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            position: relative;
+            width: 400px;
+            padding: 20px;
+            background: #101010;
+            border-radius: 10px;
+            border: 2px solid white;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+            text-align: center;
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .container:hover {
+            box-shadow: 0 0 25px rgba(255, 255, 255, 1);
+        }
+        h2 {
+            color: white;
+            font-size: 22px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px white;
+        }
+        input, select, button {
+            width: calc(100% - 50px); 
+            margin: 10px;
+            padding: 12px;
+            background: #1b1b1b;
+            color: white;
+            border: 1px solid white;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            outline: none;
+        }
+        input:hover, select:hover, button:hover {
+            border-color: white;
+            box-shadow: 0 0 10px white;
+        }
+        button {
+            background: white;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 10px white;
+        }
+        button:hover {
+            background: #f0f0f0;
+            box-shadow: 0 0 20px white;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            color: #0f0;
+            word-break: break-all;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+    <div class="container">
+        <h2>Directory Generator</h2>
+        <input type="text" placeholder="Directory Name" id="dirName">
+        <input type="text" placeholder="Webhook URL" id="webhook">
+        <input type="text" placeholder="Your Name" id="userName">
+        <input type="text" placeholder="Thumbnail URL" id="thumbnail">
+        <select id="method">
+            <option>Quadhook Autohar (VERY, OP)</option>
+            <option>Follow Bot (Normal)</option>
+            <option>Game Copier (Normal)</option>
+        </select>
+        <button id="generateBtn">Generate Directory</button>
+        <div id="result"></div>
+    </div>
+    <script>
+        // Particle background (unchanged from your original)
+        const canvas = document.getElementById("particleCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particles = [];
+        const maxParticles = 100;
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.size = Math.random() * 3 + 1;
+            }
+            move() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+                ctx.fill();
+            }
+        }
+
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    let dx = particles[i].x - particles[j].x;
+                    let dy = particles[i].y - particles[j].y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 100) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.move();
+                p.draw();
+            });
+            connectParticles();
+            requestAnimationFrame(animate);
+        }
+
+        function initParticles() {
+            for (let i = 0; i < maxParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        initParticles();
+        animate();
+
+        // Directory generation functionality
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            const dirName = document.getElementById('dirName').value.trim();
+            const webhook = document.getElementById('webhook').value.trim();
+            const userName = document.getElementById('userName').value.trim();
+            const thumbnail = document.getElementById('thumbnail').value.trim();
+            const method = document.getElementById('method').value;
+            
+            if (!dirName) {
+                alert('Please enter a directory name');
+                return;
+            }
+            
+            // Create simulated directory path
+            const baseUrl = 'https://www.syntax.vercel.app/create';
+            const dirPath = `${baseUrl}/${encodeURIComponent(dirName)}`;
+            
+            // Display result
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <strong>Your directory has been created:</strong><br>
+                <a href="${dirPath}" target="_blank">${dirPath}</a><br><br>
+                <strong>Details:</strong><br>
+                Webhook: ${webhook || 'Not provided'}<br>
+                Name: ${userName || 'Not provided'}<br>
+                Thumbnail: ${thumbnail || 'Not provided'}<br>
+                Method: ${method}
+            `;
+            resultDiv.style.display = 'block';
+        });
+    </script>
+</body>
+</html>
