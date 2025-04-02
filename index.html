@@ -102,7 +102,7 @@
             <option>Game Copier (Normal)</option>
         </select>
         <button id="generateBtn">Generate Directory</button>
-        <div class="loading" id="loading">Sending to Discord...</div>
+        <div class="loading" id="loading">Creating directory...</div>
         <div id="result"></div>
     </div>
     <script>
@@ -137,34 +137,6 @@
             }
         }
 
-        function connectParticles() {
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i + 1; j < particles.length; j++) {
-                    let dx = particles[i].x - particles[j].x;
-                    let dy = particles[i].y - particles[j].y;
-                    let distance = Math.sqrt(dx * dx + dy * dy);
-                    if (distance < 100) {
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
-
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                p.move();
-                p.draw();
-            });
-            connectParticles();
-            requestAnimationFrame(animate);
-        }
-
         function initParticles() {
             for (let i = 0; i < maxParticles; i++) {
                 particles.push(new Particle());
@@ -172,9 +144,8 @@
         }
 
         initParticles();
-        animate();
 
-        // Directory generation and Discord webhook functionality
+        // Directory generation
         document.getElementById('generateBtn').addEventListener('click', async function() {
             const dirName = document.getElementById('dirName').value.trim();
             const webhookUrl = document.getElementById('webhook').value.trim();
@@ -187,55 +158,49 @@
                 return;
             }
             
-            // Show loading indicator
             document.getElementById('loading').style.display = 'block';
             document.getElementById('result').style.display = 'none';
             
-            // Create directory path with the new domain
-            const dirPath = `https://synauto.vercel.app/${encodeURIComponent(dirName)}`;
-            
             try {
-                // Send to Discord webhook
-                const response = await fetch(webhookUrl, {
+                // Create directory
+                const response = await fetch('/api/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ dirName })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create directory');
+                }
+                
+                // Send to Discord
+                await fetch(webhookUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         embeds: [{
-                            title: "🚀 New Directory Generated",
-                            description: `**Directory:** [${dirName}](${dirPath})\n**Created by:** ${userName}\n**Method:** ${method}`,
-                            color: 65280, // Green color
+                            title: "New Directory Created",
+                            description: `**Path:** [${data.url}](${data.url})\n**By:** ${userName}\n**Method:** ${method}`,
+                            color: 65280,
                             thumbnail: thumbnail ? { url: thumbnail } : undefined,
-                            timestamp: new Date().toISOString(),
-                            footer: {
-                                text: "Generated via SynAuto Directory Generator"
-                            }
+                            timestamp: new Date().toISOString()
                         }]
                     })
                 });
                 
-                if (response.ok) {
-                    document.getElementById('result').innerHTML = `
-                        <strong>✅ Directory created successfully!</strong><br><br>
-                        <strong>Your directory URL:</strong><br>
-                        <a href="${dirPath}" target="_blank" style="color:#0f0">${dirPath}</a><br><br>
-                        <strong>Details have been sent to your Discord webhook</strong>
-                    `;
-                } else {
-                    document.getElementById('result').innerHTML = `
-                        <strong>⚠️ Directory created but Discord notification failed</strong><br><br>
-                        <strong>Your directory URL:</strong><br>
-                        <a href="${dirPath}" target="_blank" style="color:#0f0">${dirPath}</a><br><br>
-                        <strong>Error:</strong> ${response.status} ${response.statusText}
-                    `;
-                }
+                document.getElementById('result').innerHTML = `
+                    <strong>✅ Directory created!</strong><br><br>
+                    <a href="${data.url}" target="_blank" style="color:#0f0">${data.url}</a>
+                `;
             } catch (error) {
                 document.getElementById('result').innerHTML = `
-                    <strong>❌ Error occurred</strong><br><br>
-                    <strong>Directory URL would be:</strong><br>
-                    <a href="${dirPath}" target="_blank" style="color:#0f0">${dirPath}</a><br><br>
-                    <strong>Error details:</strong> ${error.message}
+                    <strong>❌ Error: ${error.message}</strong>
                 `;
             } finally {
                 document.getElementById('loading').style.display = 'none';
